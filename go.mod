@@ -3,7 +3,7 @@ module github.com/MikunoNaka/OpenBills-server
 go 1.19
 
 require (
-	github.com/MikunoNaka/OpenBills-lib v0.0.1
+	github.com/MikunoNaka/OpenBills-lib v0.0.2
 	github.com/gin-gonic/gin v1.8.1
 )
 
