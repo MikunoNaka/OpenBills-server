@@ -1,3 +1,20 @@
+/* OpenBills-server - Server for libre billing software OpenBills-web
+ * Copyright (C) 2022  Vidhu Kant Sharma <vidhukant@vidhukant.xyz>
+
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 package invoice
 
 import (
@@ -5,125 +22,111 @@ import (
 	"github.com/MikunoNaka/OpenBills-lib/invoice"
 	"log"
 	"net/http"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func Routes(route *gin.Engine) {
 	i := route.Group("/invoice")
 	{
-		i.GET("/", func(ctx *gin.Context) {
+		i.GET("/all", func(ctx *gin.Context) {
 			// TODO: add functionality to filter results
 			invoices, err := invoice.GetInvoices(nil)
 			if err != nil {
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				log.Printf("ERROR: Failed to read invoices from DB: %v\n", err.Error())
+				return
 			}
 
 			ctx.JSON(http.StatusOK, invoices)
 		})
 
-		i.POST("/", func(ctx *gin.Context) {
-			var x invoice.Invoice
-			ctx.Bind(&x)
-			err := x.Save()
+		i.DELETE("/:invoiceId", func(ctx *gin.Context) {
+			id := ctx.Param("invoiceId")
+			objectId, err := primitive.ObjectIDFromHex(id)
 			if err != nil {
-				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				log.Printf("ERROR: Failed to generate new invoice #%d: %v\n", x.InvoiceNumber, err.Error())
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				log.Printf("ERROR: Failed to delete invoice, Error parsing ID: %v\n", err.Error())
+				return
 			}
 
-			log.Printf("Generated new invoice #%d.\n", x.InvoiceNumber)
-			ctx.JSON(http.StatusOK, nil)
-		})
-
-		i.DELETE("/", func(ctx *gin.Context) {
-			var x invoice.Invoice
-			ctx.Bind(&x)
-			err := x.Delete()
+			err = invoice.DeleteInvoice(objectId)
 			if err != nil {
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				log.Printf("ERROR: Failed to delete invoice #%d: %v\n", x.InvoiceNumber, err.Error())
+				log.Printf("ERROR: Failed to delete invoice %v: %v\n", objectId, err.Error())
+				return
 			}
 
-			log.Printf("Deleted invoice invoice #%d.\n", x.InvoiceNumber)
+			log.Printf("Deleted invoice %v from database.\n", objectId )
 			ctx.JSON(http.StatusOK, nil)
 		})
 	}
 
 	transport := route.Group("/transport")
 	{
-		transport.GET("/", func(ctx *gin.Context) {
+		transport.GET("/all", func(ctx *gin.Context) {
 			// TODO: add functionality to filter results
 			transports, err := invoice.GetTransports(nil)
 			if err != nil {
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				log.Printf("ERROR: Failed to read transport vehicles from DB: %v\n", err.Error())
+				return
 			}
 
 			ctx.JSON(http.StatusOK, transports)
 		})
 
-		transport.POST("/", func(ctx *gin.Context) {
-			var x invoice.Transport
-			ctx.Bind(&x)
-			err := x.Save()
+		transport.DELETE("/:transportId", func(ctx *gin.Context) {
+			id := ctx.Param("transportId")
+			objectId, err := primitive.ObjectIDFromHex(id)
 			if err != nil {
-				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				log.Printf("ERROR: Failed to add transport vehicle \"%s\": %v\n", x.VehicleNum, err.Error())
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				log.Printf("ERROR: Failed to delete transport vehicle, Error parsing ID: %v\n", err.Error())
+				return
 			}
 
-			log.Printf("Added new transport vehicle to database: \"%s\"\n", x.VehicleNum)
-			ctx.JSON(http.StatusOK, nil)
-		})
-
-		transport.DELETE("/", func(ctx *gin.Context) {
-			var x invoice.Transport
-			ctx.Bind(&x)
-			err := x.Delete()
+			err = invoice.DeleteTransport(objectId)
 			if err != nil {
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				log.Printf("ERROR: Failed to delete transport vehicle \"%s\": %v\n", x.VehicleNum, err.Error())
+				log.Printf("ERROR: Failed to delete transport vehicle %v: %v\n", objectId, err.Error())
+				return
 			}
 
-			log.Printf("Deleted transport vehicle: \"%s\"\n", x.VehicleNum)
+			log.Printf("Deleted transport vehicle %v from database.\n", objectId )
 			ctx.JSON(http.StatusOK, nil)
 		})
 	}
 
 	transporter := route.Group("/transporter")
 	{
-		transporter.GET("/", func(ctx *gin.Context) {
+		transporter.GET("/all", func(ctx *gin.Context) {
 			// TODO: add functionality to filter results
 			transporters, err := invoice.GetTransporters(nil)
 			if err != nil {
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				log.Printf("ERROR: Failed to read transporters from DB: %v\n", err.Error())
+				return
 			}
 
 			ctx.JSON(http.StatusOK, transporters)
 		})
 
-		transporter.POST("/", func(ctx *gin.Context) {
-			var x invoice.Transporter
-			ctx.Bind(&x)
-			err := x.Save()
+		transporter.DELETE("/:transporterId", func(ctx *gin.Context) {
+			id := ctx.Param("transporterId")
+			objectId, err := primitive.ObjectIDFromHex(id)
 			if err != nil {
-				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				log.Printf("ERROR: Failed to add transporter \"%s\": %v\n", x.Name, err.Error())
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				log.Printf("ERROR: Failed to delete transporter, Error parsing ID: %v\n", err.Error())
+				return
 			}
 
-			log.Printf("Added new transporter to database: \"%s\"\n", x.Name)
-			ctx.JSON(http.StatusOK, nil)
-		})
-
-		transporter.DELETE("/", func(ctx *gin.Context) {
-			var x invoice.Transporter
-			ctx.Bind(&x)
-			err := x.Delete()
+			err = invoice.DeleteTransporter(objectId)
 			if err != nil {
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				log.Printf("ERROR: Failed to delete transporter \"%s\": %v\n", x.Name, err.Error())
+				log.Printf("ERROR: Failed to delete transporter %v: %v\n", objectId, err.Error())
+				return
 			}
 
-			log.Printf("Deleted transporter: \"%s\"\n", x.Name)
+			log.Printf("Deleted transporter %v from database.\n", objectId )
 			ctx.JSON(http.StatusOK, nil)
 		})
 	}
