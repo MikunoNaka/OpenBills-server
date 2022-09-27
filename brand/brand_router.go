@@ -41,6 +41,42 @@ func Routes(route *gin.Engine) {
 			ctx.JSON(http.StatusOK, brands)
 		})
 
+		b.POST("/new", func(ctx *gin.Context) {
+			var b brand.Brand
+			ctx.BindJSON(&b)
+			_, err := brand.SaveBrand(b)
+			if err != nil {
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				log.Printf("ERROR: Failed to add new brand %v to DB: %v\n", b, err.Error())
+				return
+			}
+
+			log.Printf("Successfully saved new brand to DB: %v", b)
+			ctx.JSON(http.StatusOK, nil)
+		})
+
+		b.PUT("/:brandId", func(ctx *gin.Context) {
+			id := ctx.Param("brandId")
+			objectId, err := primitive.ObjectIDFromHex(id)
+			if err != nil {
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				log.Printf("ERROR: Failed to modify brand, Error parsing ID: %v\n", err.Error())
+				return
+			}
+
+			var b brand.Brand
+			ctx.BindJSON(&b)
+			err = brand.ModifyBrand(objectId, b)
+			if err != nil {
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				log.Printf("ERROR: Failed to modify brand %v: %v\n", objectId, err.Error())
+				return
+			}
+
+			log.Printf("Modified brand %v to %v.\n", objectId, b)
+			ctx.JSON(http.StatusOK, nil)
+		})
+
 		b.DELETE("/:brandId", func(ctx *gin.Context) {
 			id := ctx.Param("brandId")
 			objectId, err := primitive.ObjectIDFromHex(id)

@@ -40,6 +40,42 @@ func Routes(route *gin.Engine) {
 			ctx.JSON(http.StatusOK, clients)
 		})
 
+		c.POST("/new", func(ctx *gin.Context) {
+			var c client.Client
+			ctx.BindJSON(&c)
+			_, err := client.SaveClient(c)
+			if err != nil {
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				log.Printf("ERROR: Failed to add new client %v to DB: %v\n", c, err.Error())
+				return
+			}
+
+			log.Printf("Successfully saved new client to DB: %v", c)
+			ctx.JSON(http.StatusOK, nil)
+		})
+
+		c.PUT("/:clientId", func(ctx *gin.Context) {
+			id := ctx.Param("clientId")
+			objectId, err := primitive.ObjectIDFromHex(id)
+			if err != nil {
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				log.Printf("ERROR: Failed to modify client, Error parsing ID: %v\n", err.Error())
+				return
+			}
+
+			var c client.Client
+			ctx.BindJSON(&c)
+			err = client.ModifyClient(objectId, c)
+			if err != nil {
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				log.Printf("ERROR: Failed to modify client %v: %v\n", objectId, err.Error())
+				return
+			}
+
+			log.Printf("Modified client %v to %v.\n", objectId, c)
+			ctx.JSON(http.StatusOK, nil)
+		})
+
 		c.DELETE("/:clientId", func(ctx *gin.Context) {
 			id := ctx.Param("clientId")
 			objectId, err := primitive.ObjectIDFromHex(id)

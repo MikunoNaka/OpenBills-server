@@ -55,6 +55,28 @@ func Routes(route *gin.Engine) {
 			ctx.JSON(http.StatusOK, nil)
 		})
 
+		i.PUT("/:itemId", func(ctx *gin.Context) {
+			id := ctx.Param("itemId")
+			objectId, err := primitive.ObjectIDFromHex(id)
+			if err != nil {
+				ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				log.Printf("ERROR: Failed to modify item, Error parsing ID: %v\n", err.Error())
+				return
+			}
+
+			var i item.Item
+			ctx.BindJSON(&i)
+			err = item.ModifyItem(objectId, i)
+			if err != nil {
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				log.Printf("ERROR: Failed to modify item %v: %v\n", objectId, err.Error())
+				return
+			}
+
+			log.Printf("Modified item %v to %v.\n", objectId, i)
+			ctx.JSON(http.StatusOK, nil)
+		})
+
 		i.DELETE("/:itemId", func(ctx *gin.Context) {
 			id := ctx.Param("itemId")
 			objectId, err := primitive.ObjectIDFromHex(id)
