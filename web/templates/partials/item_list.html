@@ -1,0 +1,7 @@
+{{ define "partials/item_list.html.tmpl" }}
+<div class="items">
+  {{ range .Items }}
+    {{ template "partials/item.html" .}}
+  {{ end }}
+</div>
+{{ end }}

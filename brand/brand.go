@@ -15,26 +15,25 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package main
+package brand
 
 import (
-	"github.com/MikunoNaka/OpenBills-server/brand"
-	"github.com/MikunoNaka/OpenBills-server/item"
-	"github.com/MikunoNaka/OpenBills-server/client"
-	"github.com/MikunoNaka/OpenBills-server/invoice"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 	"github.com/MikunoNaka/OpenBills-server/database"
-
-	"github.com/gin-gonic/gin"
 )
 
-func main() {
-	defer database.DisconnectDB()
-	r := gin.New()
+// initialise a database connection for this package
+// not sure if I should do this but I am...
+var db *mongo.Collection = database.DB.Collection("Brands")
 
-	item.Routes(r)
-	brand.Routes(r)
-	client.Routes(r)
-	invoice.Routes(r)
-
-	r.Run(":6969")
+/* An item may or may not be
+ * assigned to a brand
+ *
+ * brands can be used to group products
+ * to perform certain actions
+ */
+type Brand struct {
+  Id   primitive.ObjectID `bson:"_id,omitempty" json:"Id"`
+  Name string             `bson:"Name" json:"Name"`
 }

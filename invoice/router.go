@@ -19,10 +19,11 @@ package invoice
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/MikunoNaka/OpenBills-lib/invoice"
 	"log"
 	"net/http"
+	"strconv"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 func Routes(route *gin.Engine) {
@@ -30,7 +31,7 @@ func Routes(route *gin.Engine) {
 	{
 		i.GET("/all", func(ctx *gin.Context) {
 			// TODO: add functionality to filter results
-			invoices, err := invoice.GetInvoices(nil)
+			invoices, err := getInvoices(nil)
 			if err != nil {
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				log.Printf("ERROR: Failed to read invoices from DB: %v\n", err.Error())
@@ -38,6 +39,43 @@ func Routes(route *gin.Engine) {
 			}
 
 			ctx.JSON(http.StatusOK, invoices)
+		})
+
+		// preview invoice
+		i.GET("/preview/:invoiceNumber", func(ctx *gin.Context) {
+			num := ctx.Param("invoiceNumber")
+			numInt, _ := strconv.Atoi(num)
+
+			invoice, err := getInvoices(bson.M{"InvoiceNumber": numInt})
+			if err != nil {
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				log.Printf("ERROR: Failed to read invoice %v from DB: %v\n", numInt, err.Error())
+				return
+			}
+
+			if len(invoice) == 0 {
+				ctx.JSON(http.StatusNotFound, gin.H{"error": "no invoice with this invoice number"})
+				log.Printf("WARN: No invoice with number %v found", numInt)
+				return
+			}
+
+			ctx.HTML(http.StatusOK, "invoice.html", gin.H{
+				"Invoice": invoice[0],
+			})
+		})
+
+		i.POST("/new", func(ctx *gin.Context) {
+			var i Invoice
+			ctx.BindJSON(&i)
+			_, err := saveInvoice(i)
+			if err != nil {
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				log.Printf("ERROR: Failed to add new invoice %v to DB: %v\n", i, err.Error())
+				return
+			}
+
+			log.Printf("Successfully created new Invoice: %v", i)
+			ctx.JSON(http.StatusOK, nil)
 		})
 
 		i.DELETE("/:invoiceId", func(ctx *gin.Context) {
@@ -49,7 +87,7 @@ func Routes(route *gin.Engine) {
 				return
 			}
 
-			err = invoice.DeleteInvoice(objectId)
+			err = deleteInvoice(objectId)
 			if err != nil {
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				log.Printf("ERROR: Failed to delete invoice %v: %v\n", objectId, err.Error())
@@ -65,7 +103,7 @@ func Routes(route *gin.Engine) {
 	{
 		transport.GET("/all", func(ctx *gin.Context) {
 			// TODO: add functionality to filter results
-			transports, err := invoice.GetTransports(nil)
+			transports, err := getTransports(nil)
 			if err != nil {
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				log.Printf("ERROR: Failed to read transport vehicles from DB: %v\n", err.Error())
@@ -84,7 +122,7 @@ func Routes(route *gin.Engine) {
 				return
 			}
 
-			err = invoice.DeleteTransport(objectId)
+			err = deleteTransport(objectId)
 			if err != nil {
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				log.Printf("ERROR: Failed to delete transport vehicle %v: %v\n", objectId, err.Error())
@@ -100,7 +138,7 @@ func Routes(route *gin.Engine) {
 	{
 		transporter.GET("/all", func(ctx *gin.Context) {
 			// TODO: add functionality to filter results
-			transporters, err := invoice.GetTransporters(nil)
+			transporters, err := getTransporters(nil)
 			if err != nil {
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				log.Printf("ERROR: Failed to read transporters from DB: %v\n", err.Error())
@@ -119,7 +157,7 @@ func Routes(route *gin.Engine) {
 				return
 			}
 
-			err = invoice.DeleteTransporter(objectId)
+			err = deleteTransporter(objectId)
 			if err != nil {
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				log.Printf("ERROR: Failed to delete transporter %v: %v\n", objectId, err.Error())

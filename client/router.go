@@ -15,85 +15,83 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package brand
+package client
 
 import (
 	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"github.com/MikunoNaka/OpenBills-lib/brand"
 	"log"
 	"net/http"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-
 func Routes(route *gin.Engine) {
-	b := route.Group("/brand")
+	c := route.Group("/client")
 	{
-		b.GET("/all", func(ctx *gin.Context) {
+		c.GET("/all", func(ctx *gin.Context) {
 			// TODO: add functionality to filter results
-			brands, err := brand.GetBrands(nil)
+			clients, err := getClients(nil)
 			if err != nil {
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				log.Printf("ERROR: Failed to read brands from DB: %v\n", err.Error())
+				log.Printf("ERROR: Failed to read clients from DB: %v\n", err.Error())
 				return
 			}
 
-			ctx.JSON(http.StatusOK, brands)
+			ctx.JSON(http.StatusOK, clients)
 		})
 
-		b.POST("/new", func(ctx *gin.Context) {
-			var b brand.Brand
-			ctx.BindJSON(&b)
-			_, err := brand.SaveBrand(b)
+		c.POST("/new", func(ctx *gin.Context) {
+			var c Client
+			ctx.BindJSON(&c)
+			_, err := saveClient(c)
 			if err != nil {
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				log.Printf("ERROR: Failed to add new brand %v to DB: %v\n", b, err.Error())
+				log.Printf("ERROR: Failed to add new client %v to DB: %v\n", c, err.Error())
 				return
 			}
 
-			log.Printf("Successfully saved new brand to DB: %v", b)
+			log.Printf("Successfully saved new client to DB: %v", c)
 			ctx.JSON(http.StatusOK, nil)
 		})
 
-		b.PUT("/:brandId", func(ctx *gin.Context) {
-			id := ctx.Param("brandId")
+		c.PUT("/:clientId", func(ctx *gin.Context) {
+			id := ctx.Param("clientId")
 			objectId, err := primitive.ObjectIDFromHex(id)
 			if err != nil {
 				ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-				log.Printf("ERROR: Failed to modify brand, Error parsing ID: %v\n", err.Error())
+				log.Printf("ERROR: Failed to modify client, Error parsing ID: %v\n", err.Error())
 				return
 			}
 
-			var b brand.Brand
-			ctx.BindJSON(&b)
-			err = brand.ModifyBrand(objectId, b)
+			var c Client
+			ctx.BindJSON(&c)
+			err = modifyClient(objectId, c)
 			if err != nil {
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				log.Printf("ERROR: Failed to modify brand %v: %v\n", objectId, err.Error())
+				log.Printf("ERROR: Failed to modify client %v: %v\n", objectId, err.Error())
 				return
 			}
 
-			log.Printf("Modified brand %v to %v.\n", objectId, b)
+			log.Printf("Modified client %v to %v.\n", objectId, c)
 			ctx.JSON(http.StatusOK, nil)
 		})
 
-		b.DELETE("/:brandId", func(ctx *gin.Context) {
-			id := ctx.Param("brandId")
+		c.DELETE("/:clientId", func(ctx *gin.Context) {
+			id := ctx.Param("clientId")
 			objectId, err := primitive.ObjectIDFromHex(id)
 			if err != nil {
 				ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-				log.Printf("ERROR: Failed to delete brand, Error parsing ID: %v\n", err.Error())
+				log.Printf("ERROR: Failed to delete client, Error parsing ID: %v\n", err.Error())
 				return
 			}
 
-			err = brand.DeleteBrand(objectId)
+			err = deleteClient(objectId)
 			if err != nil {
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				log.Printf("ERROR: Failed to delete brand %v: %v\n", objectId, err.Error())
+				log.Printf("ERROR: Failed to delete client %v: %v\n", objectId, err.Error())
 				return
 			}
 
-			log.Printf("Deleted brand %v from database.\n", objectId )
+			log.Printf("Deleted client %v from database.\n", objectId )
 			ctx.JSON(http.StatusOK, nil)
 		})
 	}
