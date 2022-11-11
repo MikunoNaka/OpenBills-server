@@ -91,6 +91,8 @@ type Invoice struct {
   // user can apply a discount on the whole invoice
   // TODO: float64 isn't the best for this
   DiscountPercentage float64    `bson:"DiscountPercentage" json:"DiscountPercentage"`
+  // helps to filter amount by amount
+  TotalAmount        float64    `bson:"TotalAmount" json:"TotalAmount"`
   /* client may have multiple shipping
    * addresses but invoice only has one.
    * Empty ShippingAddress means shipping
