@@ -117,3 +117,15 @@ func getTransports(filter bson.M) ([]Transport, error) {
 	err = cursor.All(context.TODO(), &transports)
 	return transports, err
 }
+
+func getInvoiceByNumber(invoiceNumber int) (Invoice, error) {
+	var invoice Invoice
+	err := db.Collection("Invoices").FindOne(context.TODO(), bson.M{"InvoiceNumber": invoiceNumber}).Decode(&invoice)
+	return invoice, err
+}
+
+func getInvoiceById(invoiceId primitive.ObjectID) (Invoice, error) {
+	var invoice Invoice
+	err := db.Collection("Invoices").FindOne(context.TODO(), bson.M{"_id": invoiceId}).Decode(&invoice)
+	return invoice, err
+}

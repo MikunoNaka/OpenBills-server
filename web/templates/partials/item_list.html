@@ -1,6 +1,6 @@
-{{ define "partials/item_list.html.tmpl" }}
+{{ define "partials/item_list.html" }}
 <div class="items">
-  {{ range .Items }}
+  {{ range . }}
     {{ template "partials/item.html" .}}
   {{ end }}
 </div>

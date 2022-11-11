@@ -20,10 +20,12 @@ package invoice
 import (
 	"github.com/gin-gonic/gin"
 	"log"
+	"errors"
 	"net/http"
 	"strconv"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	//"go.mongodb.org/mongo-driver/bson"
 )
 
 func Routes(route *gin.Engine) {
@@ -41,27 +43,93 @@ func Routes(route *gin.Engine) {
 			ctx.JSON(http.StatusOK, invoices)
 		})
 
-		// preview invoice
-		i.GET("/preview/:invoiceNumber", func(ctx *gin.Context) {
+		// TODO: /preview routes should send error codes as HTML
+		// send invoice as HTML, filtering by InvoiceNumber
+		i.GET("/preview/by-num/:invoiceNumber", func(ctx *gin.Context) {
 			num := ctx.Param("invoiceNumber")
 			numInt, _ := strconv.Atoi(num)
 
-			invoice, err := getInvoices(bson.M{"InvoiceNumber": numInt})
+			invoice, err := getInvoiceByNumber(numInt)
 			if err != nil {
-				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				log.Printf("ERROR: Failed to read invoice %v from DB: %v\n", numInt, err.Error())
-				return
-			}
-
-			if len(invoice) == 0 {
-				ctx.JSON(http.StatusNotFound, gin.H{"error": "no invoice with this invoice number"})
-				log.Printf("WARN: No invoice with number %v found", numInt)
+				if errors.Is(err, mongo.ErrNoDocuments) {
+					ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+				} else {
+					ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				}
+				log.Printf("ERROR: Failed to read invoice #%d from DB: %v\n", numInt, err.Error())
 				return
 			}
 
 			ctx.HTML(http.StatusOK, "invoice.html", gin.H{
-				"Invoice": invoice[0],
+				"Invoice": invoice,
 			})
+		})
+
+		// send invoice as HTML, filtering by ID
+		i.GET("/preview/by-id/:invoiceId", func(ctx *gin.Context) {
+			id, err := primitive.ObjectIDFromHex(ctx.Param("invoiceId"))
+			if err != nil {
+                ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				log.Printf("ERROR: Failed to get invoice with ID, Error parsing ID: %v\n", err.Error())
+				return
+			}
+
+			invoice, err := getInvoiceById(id)
+			if err != nil {
+				if errors.Is(err, mongo.ErrNoDocuments) {
+					ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+				} else {
+					ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				}
+				log.Printf("ERROR: Failed to read invoice %v from DB: %v\n", id, err.Error())
+				return
+			}
+
+			ctx.HTML(http.StatusOK, "invoice.html", gin.H{
+				"Invoice": invoice,
+			})
+		})
+
+		// send invoice as JSON, filtering by InvoiceNumber
+		i.GET("/by-num/:invoiceNumber", func(ctx *gin.Context) {
+			num := ctx.Param("invoiceNumber")
+			numInt, _ := strconv.Atoi(num)
+
+			invoice, err := getInvoiceByNumber(numInt)
+			if err != nil {
+				if errors.Is(err, mongo.ErrNoDocuments) {
+					ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+				} else {
+					ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				}
+				log.Printf("ERROR: Failed to read invoice #%d from DB: %v\n", numInt, err.Error())
+				return
+			}
+
+			ctx.JSON(http.StatusOK, invoice)
+		})
+
+		// send invoice as JSON, filtering by ID
+		i.GET("/by-id/:invoiceId", func(ctx *gin.Context) {
+			id, err := primitive.ObjectIDFromHex(ctx.Param("invoiceId"))
+			if err != nil {
+                ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				log.Printf("ERROR: Failed to get invoice with ID, Error parsing ID: %v\n", err.Error())
+				return
+			}
+
+			invoice, err := getInvoiceById(id)
+			if err != nil {
+				if errors.Is(err, mongo.ErrNoDocuments) {
+					ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+				} else {
+					ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				}
+				log.Printf("ERROR: Failed to read invoice %v from DB: %v\n", id, err.Error())
+				return
+			}
+
+			ctx.JSON(http.StatusOK, invoice)
 		})
 
 		i.POST("/new", func(ctx *gin.Context) {
