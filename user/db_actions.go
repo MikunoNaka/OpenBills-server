@@ -15,32 +15,31 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package main
+package user
 
 import (
-	"github.com/MikunoNaka/OpenBills-server/brand"
-	"github.com/MikunoNaka/OpenBills-server/item"
-	"github.com/MikunoNaka/OpenBills-server/client"
-	"github.com/MikunoNaka/OpenBills-server/invoice"
-	"github.com/MikunoNaka/OpenBills-server/user"
-	"github.com/MikunoNaka/OpenBills-server/database"
-	"github.com/MikunoNaka/OpenBills-server/auth"
-
-	"github.com/gin-gonic/gin"
+	"context"
+	"fmt"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func main() {
-	defer database.DisconnectDB()
-	r := gin.New()
+// Add user to db
+func saveUser(u User) (primitive.ObjectID, error) {
+	u.hashPassword()
+	res, err := db.InsertOne(context.TODO(), u)
+	return res.InsertedID.(primitive.ObjectID), err
+}
 
-	r.LoadHTMLGlob("web/templates/**/*")
+// Delete user from DB
+func deleteUser(id primitive.ObjectID) error {
+	_, err := db.DeleteOne(context.TODO(), bson.M{"_id": id})
+	return err
+}
 
-	item.Routes(r)
-	brand.Routes(r)
-	client.Routes(r)
-	invoice.Routes(r)
-	user.Routes(r)
-	auth.Routes(r)
-
-	r.Run(":6969")
+// modify user in DB
+func modifyUser(id primitive.ObjectID, nu User) error {
+	fmt.Println(nu.Password)
+	_, err := db.UpdateOne(context.TODO(), bson.D{{"_id", id}}, bson.D{{"$set", nu}})
+	return err
 }

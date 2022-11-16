@@ -15,32 +15,46 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package main
+package auth
 
 import (
-	"github.com/MikunoNaka/OpenBills-server/brand"
-	"github.com/MikunoNaka/OpenBills-server/item"
-	"github.com/MikunoNaka/OpenBills-server/client"
-	"github.com/MikunoNaka/OpenBills-server/invoice"
-	"github.com/MikunoNaka/OpenBills-server/user"
-	"github.com/MikunoNaka/OpenBills-server/database"
-	"github.com/MikunoNaka/OpenBills-server/auth"
-
 	"github.com/gin-gonic/gin"
+	"context"
+	"fmt"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"github.com/MikunoNaka/OpenBills-server/database"
+	"github.com/MikunoNaka/OpenBills-server/user"
+	"net/http"
+    //"golang.org/x/crypto/bcrypt"
 )
 
-func main() {
-	defer database.DisconnectDB()
-	r := gin.New()
+var db *mongo.Collection = database.DB.Collection("Users")
 
-	r.LoadHTMLGlob("web/templates/**/*")
+func checkPassword() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		var u user.User
+	    ctx.BindJSON(&u)
 
-	item.Routes(r)
-	brand.Routes(r)
-	client.Routes(r)
-	invoice.Routes(r)
-	user.Routes(r)
-	auth.Routes(r)
+		filter := bson.M{
+			"UserName": u.UserName,
+			"$or": bson.M{"Email": u.Email},
+		}
 
-	r.Run(":6969")
+		err := db.FindOne(context.TODO(), filter).Decode(&u)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(u)
+	}
+}
+
+func Routes(route *gin.Engine) {
+	u := route.Group("/auth")
+	{
+		u.POST("/login", func(ctx *gin.Context) {
+			checkPassword()(ctx)
+			ctx.HTML(http.StatusOK, "<h1>Hello World</h1>", nil)
+		})
+	}
 }
