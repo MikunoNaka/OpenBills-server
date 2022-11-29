@@ -26,7 +26,10 @@ import (
 
 // Add user to db
 func saveUser(u User) (primitive.ObjectID, error) {
-	u.hashPassword()
+	err := u.hashPassword()
+	if err != nil {
+		return *new(primitive.ObjectID), err
+	}
 	res, err := db.InsertOne(context.TODO(), u)
 	return res.InsertedID.(primitive.ObjectID), err
 }

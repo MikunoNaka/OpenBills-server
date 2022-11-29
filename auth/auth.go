@@ -20,13 +20,13 @@ package auth
 import (
 	"github.com/gin-gonic/gin"
 	"context"
-	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"github.com/MikunoNaka/OpenBills-server/database"
 	"github.com/MikunoNaka/OpenBills-server/user"
 	"net/http"
-    //"golang.org/x/crypto/bcrypt"
+	"log"
+    "golang.org/x/crypto/bcrypt"
 )
 
 var db *mongo.Collection = database.DB.Collection("Users")
@@ -37,24 +37,50 @@ func checkPassword() gin.HandlerFunc {
 	    ctx.BindJSON(&u)
 
 		filter := bson.M{
-			"UserName": u.UserName,
-			"$or": bson.M{"Email": u.Email},
+			"$or": []bson.M{
+			    // u.UserName in this case can be either username or email
+				{"Email": u.UserName},
+				{"UserName": u.UserName},
+			},
 		}
 
-		err := db.FindOne(context.TODO(), filter).Decode(&u)
+		// check if the user exists in DB
+		var user user.User
+		err := db.FindOne(context.TODO(), filter).Decode(&user)
 		if err != nil {
-			panic(err)
+			if err == mongo.ErrNoDocuments {
+				ctx.JSON(http.StatusNotFound, gin.H{"error": "user does not exist"})
+			} else {
+				log.Printf("Error while reading user from DB to check password: %v", err.Error())
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+			}
+			ctx.Abort()
 		}
-		fmt.Println(u)
+
+		// compare hash and password
+		err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(u.Password))
+		if err != nil {
+			if err == bcrypt.ErrMismatchedHashAndPassword {
+			    ctx.JSON(http.StatusUnauthorized, gin.H{"error": "incorrect password"})
+			} else {
+				log.Printf("Error while checking password: %v", err.Error())
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+			}
+			ctx.Abort()
+		}
+
+		// everything's fine!
+		ctx.Set("user", user)
+		ctx.Next()
 	}
 }
 
 func Routes(route *gin.Engine) {
-	u := route.Group("/auth")
+	r := route.Group("/auth")
 	{
-		u.POST("/login", func(ctx *gin.Context) {
-			checkPassword()(ctx)
-			ctx.HTML(http.StatusOK, "<h1>Hello World</h1>", nil)
+		r.POST("/login", checkPassword(), func(ctx *gin.Context) {
+			user := ctx.MustGet("user").(user.User)
+			ctx.JSON(http.StatusOK, user)
 		})
 	}
 }

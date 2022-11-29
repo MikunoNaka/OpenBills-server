@@ -20,7 +20,6 @@ package user
 import (
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"golang.org/x/crypto/bcrypt"
 	"log"
 	"net/http"
 )
@@ -31,16 +30,9 @@ func Routes(route *gin.Engine) {
 	{
 		u.POST("/new", validateMiddleware(), func(ctx *gin.Context) {
 			u := ctx.MustGet("user").(User)
-			// hash password
-			pass := []byte(u.Password)
-			hash, err := bcrypt.GenerateFromPassword(pass, bcrypt.DefaultCost)
-			if err != nil {
-				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "could not login"})
-				log.Printf("ERROR: Failed to hash password: %v\n", err.Error())
-			}
-			u.Password = string(hash)
+			// TODO: maybe add an invite code for some instances
 
-			_, err = saveUser(u)
+			_, err := saveUser(u)
 			if err != nil {
 				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "could not login"})
 				log.Printf("ERROR: Failed to add new user %v to DB: %v\n", u, err.Error())
@@ -51,27 +43,27 @@ func Routes(route *gin.Engine) {
 			ctx.JSON(http.StatusOK, nil)
 		})
 
-		u.PUT("/:userId", func(ctx *gin.Context) {
-			id := ctx.Param("userId")
-			objectId, err := primitive.ObjectIDFromHex(id)
-			if err != nil {
-				ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-				log.Printf("ERROR: Failed to modify user, Error parsing ID: %v\n", err.Error())
-				return
-			}
+    u.PUT("/:userId", func(ctx *gin.Context) {
+      id := ctx.Param("userId")
+      objectId, err := primitive.ObjectIDFromHex(id)
+      if err != nil {
+          ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+          log.Printf("ERROR: Failed to modify user, Error parsing ID: %v\n", err.Error())
+          return
+      }
 
-			var u User
-			ctx.BindJSON(&u)
-			err = modifyUser(objectId, u)
-			if err != nil {
-				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				log.Printf("ERROR: Failed to modify user %v: %v\n", objectId, err.Error())
-				return
-			}
+      var u User
+      ctx.BindJSON(&u)
+      err = modifyUser(objectId, u)
+      if err != nil {
+          ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+          log.Printf("ERROR: Failed to modify user %v: %v\n", objectId, err.Error())
+          return
+      }
 
-			log.Printf("Modified user %v to %v.\n", objectId, u)
-			ctx.JSON(http.StatusOK, nil)
-		})
+      log.Printf("Modified user %v to %v.\n", objectId, u)
+      ctx.JSON(http.StatusOK, nil)
+    })
 
 		u.DELETE("/:userId", func(ctx *gin.Context) {
 			id := ctx.Param("userId")
