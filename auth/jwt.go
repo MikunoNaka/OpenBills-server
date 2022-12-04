@@ -18,9 +18,19 @@
 package auth
 
 import (
-	"github.com/golang-jwt/jwt/v4"
+	"github.com/MikunoNaka/OpenBills-server/user"
 	"github.com/MikunoNaka/OpenBills-server/util"
+	"github.com/golang-jwt/jwt/v4"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+
+	"context"
+	"errors"
 	"time"
+)
+
+var (
+    errUserNotFound error = errors.New("user does not exist")
 )
 
 var accessSecret []byte
@@ -56,18 +66,30 @@ func newAccessToken(userId string) (string, error) {
  * for enhanced security
  */
 func newRefreshToken(userId string) (string, int64, error) {
-	// TODO: store in DB
-	expiresAt := time.Now().Add(time.Hour * 12).Unix()
+	// convert id from string to ObjectID
+	id, _ := primitive.ObjectIDFromHex(userId)
 
+	// check if user exists
+	var u user.User
+	if err := db.FindOne(context.TODO(), bson.M{"_id": id}).Decode(&u); err != nil {
+		return "", 0, errUserNotFound
+	}
+
+	// generate refresh token
+	expiresAt := time.Now().Add(time.Hour * 12).Unix()
 	claims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims {
 	    Issuer: userId,
 		ExpiresAt: expiresAt,
 	})
-
 	token, err := claims.SignedString(refreshSecret)
 	if err != nil {
 		return "", expiresAt, err
 	}
+
+	// store refresh token in db with unique session name for ease in identification
+	sessionName := time.Now().Format("01-02-2006.15:04:05") + "-" + u.UserName
+	u.Sessions = append(u.Sessions, user.Session{Name: sessionName, Token: token})
+	db.UpdateOne(context.TODO(), bson.M{"_id": id}, bson.D{{"$set", u}})
 
 	return token, expiresAt, nil
 }

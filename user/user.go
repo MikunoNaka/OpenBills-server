@@ -30,12 +30,18 @@ var db *mongo.Collection = database.DB.Collection("Users")
 type Config struct {
 }
 
+type Session struct {
+	Name string `bson:"Name" json:"Name"`
+	Token string `bson:"Token" json:"Token"`
+}
+
 type User struct {
     Id   primitive.ObjectID `bson:"_id,omitempty" json:"Id"`
     UserName string         `bson:"UserName" json:"UserName"`
     Email    string         `bson:"Email" json:"Email"`
     Password string         `bson:"Password" json:"Password"`
 	Config   Config         `bson:"Config" json:"Config"`
+	Sessions []Session      `bson:"Sessions" json:"Sessions"`
 	// some actions are only available when email is verified
 	Verified bool           `bson:"Verified" json:"Verified"`
 }

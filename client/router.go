@@ -18,6 +18,7 @@
 package client
 
 import (
+  "github.com/MikunoNaka/OpenBills-server/auth"
 	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
@@ -26,6 +27,7 @@ import (
 
 func Routes(route *gin.Engine) {
 	c := route.Group("/client")
+ 	c.Use(auth.Authorize())
 	{
 		c.GET("/all", func(ctx *gin.Context) {
 			// TODO: add functionality to filter results

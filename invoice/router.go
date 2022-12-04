@@ -18,6 +18,7 @@
 package invoice
 
 import (
+  "github.com/MikunoNaka/OpenBills-server/auth"
 	"github.com/gin-gonic/gin"
 	"log"
 	"errors"
@@ -30,6 +31,7 @@ import (
 
 func Routes(route *gin.Engine) {
 	i := route.Group("/invoice")
+ 	i.Use(auth.Authorize())
 	{
 		i.GET("/all", func(ctx *gin.Context) {
 			// TODO: add functionality to filter results

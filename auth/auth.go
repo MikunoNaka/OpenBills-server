@@ -51,17 +51,13 @@ func Routes(route *gin.Engine) {
 		})
 
 		r.POST("/refresh", verifyRefreshToken(), func (ctx *gin.Context) {
-			userId := ctx.MustGet("userId")
-			if userId != "" {
-			    accessToken, err := newAccessToken(userId.(string))
-			    if err != nil {
-			    	log.Printf("Error while generating new access token: %v", err)
-			    	ctx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"message": "Internal Server Error (cannot refresh session)"})
-			    } else {
-					ctx.JSON(http.StatusOK, gin.H{"accessToken": accessToken})
-				}
+			u := ctx.MustGet("user").(user.User)
+			accessToken, err := newAccessToken(u.Id.Hex())
+			if err != nil {
+				log.Printf("Error while generating new access token: %v", err)
+				ctx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"message": "Internal Server Error (cannot refresh session)"})
 			} else {
-				ctx.JSON(http.StatusBadRequest, gin.H{"message": "invalid user info"})
+				ctx.JSON(http.StatusOK, gin.H{"accessToken": accessToken})
 			}
 		})
 	}

@@ -18,6 +18,7 @@
 package brand
 
 import (
+  "github.com/MikunoNaka/OpenBills-server/auth"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"log"
@@ -27,6 +28,7 @@ import (
 
 func Routes(route *gin.Engine) {
 	b := route.Group("/brand")
+ 	b.Use(auth.Authorize())
 	{
 		b.GET("/all", func(ctx *gin.Context) {
 			// TODO: add functionality to filter results
