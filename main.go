@@ -18,12 +18,13 @@
 package main
 
 import (
+	_ "github.com/MikunoNaka/OpenBills-server/util"
 	"github.com/MikunoNaka/OpenBills-server/brand"
-	"github.com/MikunoNaka/OpenBills-server/item"
 	"github.com/MikunoNaka/OpenBills-server/client"
-	"github.com/MikunoNaka/OpenBills-server/invoice"
-	"github.com/MikunoNaka/OpenBills-server/user"
 	"github.com/MikunoNaka/OpenBills-server/database"
+	"github.com/MikunoNaka/OpenBills-server/invoice"
+	"github.com/MikunoNaka/OpenBills-server/item"
+	"github.com/MikunoNaka/OpenBills-server/user"
 	"github.com/MikunoNaka/OpenBills-server/auth"
 
 	"github.com/gin-gonic/gin"

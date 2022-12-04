@@ -42,13 +42,13 @@ func init() {
     ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
     defer cancel()
 
-	var err error
+	  var err error
     client, err = mongo.Connect(ctx, options.Client().ApplyURI("mongodb://127.0.0.1:27017"))
     if err != nil {
         log.Fatal(err)
     }
 
-	log.Println("Successfully connected to MongoDB database.")
+	  log.Println("Successfully connected to MongoDB database.")
     DB = client.Database("OpenBillsDB")
 }
 

@@ -19,68 +19,50 @@ package auth
 
 import (
 	"github.com/gin-gonic/gin"
-	"context"
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"github.com/MikunoNaka/OpenBills-server/database"
 	"github.com/MikunoNaka/OpenBills-server/user"
 	"net/http"
 	"log"
-    "golang.org/x/crypto/bcrypt"
 )
 
 var db *mongo.Collection = database.DB.Collection("Users")
-
-func checkPassword() gin.HandlerFunc {
-	return func(ctx *gin.Context) {
-		var u user.User
-	    ctx.BindJSON(&u)
-
-		filter := bson.M{
-			"$or": []bson.M{
-			    // u.UserName in this case can be either username or email
-				{"Email": u.UserName},
-				{"UserName": u.UserName},
-			},
-		}
-
-		// check if the user exists in DB
-		var user user.User
-		err := db.FindOne(context.TODO(), filter).Decode(&user)
-		if err != nil {
-			if err == mongo.ErrNoDocuments {
-				ctx.JSON(http.StatusNotFound, gin.H{"error": "user does not exist"})
-			} else {
-				log.Printf("Error while reading user from DB to check password: %v", err.Error())
-				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
-			}
-			ctx.Abort()
-		}
-
-		// compare hash and password
-		err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(u.Password))
-		if err != nil {
-			if err == bcrypt.ErrMismatchedHashAndPassword {
-			    ctx.JSON(http.StatusUnauthorized, gin.H{"error": "incorrect password"})
-			} else {
-				log.Printf("Error while checking password: %v", err.Error())
-				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
-			}
-			ctx.Abort()
-		}
-
-		// everything's fine!
-		ctx.Set("user", user)
-		ctx.Next()
-	}
-}
 
 func Routes(route *gin.Engine) {
 	r := route.Group("/auth")
 	{
 		r.POST("/login", checkPassword(), func(ctx *gin.Context) {
 			user := ctx.MustGet("user").(user.User)
-			ctx.JSON(http.StatusOK, user)
+
+			accessToken, err := newAccessToken(user.Id.Hex())
+			if err != nil {
+				log.Printf("Error while generating new access token: %v", err)
+				ctx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"message": "Internal Server Error (cannot login)"})
+			}
+
+			refreshToken, expiresAt, err := newRefreshToken(user.Id.Hex())
+			if err != nil {
+				log.Printf("Error while generating new refresh token: %v", err)
+				ctx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"message": "Internal Server Error (cannot login)"})
+			}
+
+			ctx.SetCookie("refreshToken", refreshToken, int(expiresAt), "", "", true, true)
+			ctx.JSON(http.StatusOK, gin.H{"accessToken": accessToken})
+		})
+
+		r.POST("/refresh", verifyRefreshToken(), func (ctx *gin.Context) {
+			userId := ctx.MustGet("userId")
+			if userId != "" {
+			    accessToken, err := newAccessToken(userId.(string))
+			    if err != nil {
+			    	log.Printf("Error while generating new access token: %v", err)
+			    	ctx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"message": "Internal Server Error (cannot refresh session)"})
+			    } else {
+					ctx.JSON(http.StatusOK, gin.H{"accessToken": accessToken})
+				}
+			} else {
+				ctx.JSON(http.StatusBadRequest, gin.H{"message": "invalid user info"})
+			}
 		})
 	}
 }

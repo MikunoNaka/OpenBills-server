@@ -19,6 +19,7 @@ package item
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/MikunoNaka/OpenBills-server/auth"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"log"
 	"net/http"
@@ -26,6 +27,7 @@ import (
 
 func Routes(route *gin.Engine) {
 	i := route.Group("/item")
+	i.Use(auth.Authorize())
 	{
 		// TODO: add functionality to filter results
 		// /all returns all the saved items
