@@ -43,5 +43,10 @@ func main() {
 	user.Routes(r)
 	auth.Routes(r)
 
+	// ping server and check if logged in
+	r.POST("/ping", auth.Authorize(), func (ctx *gin.Context) {
+		ctx.Status(200)
+	})
+
 	r.Run(":6969")
 }
