@@ -34,8 +34,6 @@ func main() {
 	defer database.DisconnectDB()
 	r := gin.New()
 
-	r.LoadHTMLGlob("web/templates/**/*")
-
 	item.Routes(r)
 	brand.Routes(r)
 	client.Routes(r)
